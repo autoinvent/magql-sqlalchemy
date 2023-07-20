@@ -1,0 +1,46 @@
+[project]
+name = "magql-sqlalchemy"
+version = "1.0.0.dev"
+description = "Generate a Magql GraphQL API from SQLAlchemy models."
+readme = "README.md"
+license = {file = "LICENSE.md"}
+authors = [{name = "David Lord", email = "davidism@gmail.com"}]
+requires-python = ">=3.8"
+dependencies = [
+    "magql>=1.0.0.dev",
+    "sqlalchemy>=2",
+]
+
+[build-system]
+requires = ["flit_core<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.flit.sdist]
+include = [
+    "docs/",
+    "requirements/",
+    "tests/",
+    "CHANGES.md",
+    "tox.ini",
+]
+exclude = ["docs/_build/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "error",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["magql_sqlalchemy", "tests"]
+
+[tool.coverage.paths]
+source = ["src", "*/site-packages"]
+
+[tool.mypy]
+python_version = "3.8"
+files = ["src/magql_sqlalchemy"]
+show_error_codes = true
+pretty = true
+strict = true
