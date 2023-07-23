@@ -19,8 +19,8 @@ class ModelResolver:
     A resolver is for a specific model, and does some introspection on the model to
     know what the mapper and primary key are.
 
-    In order to execute the SQL expression, ``info.context`` must be set to the
-    SQLAlchemy session.
+    In order to execute the SQL expression, ``info.context`` must be a dict with the
+    key ``sa_session` set to the SQLAlchemy session.
     """
 
     def __init__(self, model: type[t.Any]) -> None:
@@ -124,7 +124,7 @@ class QueryResolver(ModelResolver):
     ) -> t.Any:
         """Build and execute the query, then return the result."""
         query = self.build_query(parent, info, **kwargs)
-        result = info.context.execute(query)
+        result = info.context["sa_session"].execute(query)
         return self.transform_result(result)
 
 
@@ -291,7 +291,7 @@ class ListResolver(QueryResolver):
         self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
     ) -> t.Any:
         query = self.build_query(parent, info, **kwargs)
-        session: orm.Session = info.context
+        session: orm.Session = info.context["sa_session"]
         items = self.get_items(session, query)
         total = self.get_count(session, query)
         return ListResult(items=items, total=total)
@@ -343,11 +343,15 @@ class MutationResolver(ModelResolver):
 
     def get_item(self, info: graphql.GraphQLResolveInfo, kwargs: t.Any) -> t.Any:
         """Get the model instance by primary key value."""
-        return info.context.execute(
-            sa.select(self.model)
-            .options(*self._load_relationships(_get_field_node(info), self.model))
-            .where(self.pk_col == kwargs[self.pk_name])
-        ).scalar_one()
+        return (
+            info.context["sa_session"]
+            .execute(
+                sa.select(self.model)
+                .options(*self._load_relationships(_get_field_node(info), self.model))
+                .where(self.pk_col == kwargs[self.pk_name])
+            )
+            .scalar_one()
+        )
 
     def apply_related(self, session: orm.Session, kwargs: dict[str, t.Any]) -> None:
         """For all relationship arguments, replace the id values with their model
@@ -391,7 +395,7 @@ class CreateResolver(MutationResolver):
     def __call__(
         self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
     ) -> t.Any:
-        session: orm.Session = info.context
+        session: orm.Session = info.context["sa_session"]
         self.apply_related(session, kwargs)
         obj = self.model(**kwargs)
         session.add(obj)
@@ -412,7 +416,7 @@ class UpdateResolver(MutationResolver):
     def __call__(
         self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
     ) -> t.Any:
-        session: orm.Session = info.context
+        session: orm.Session = info.context["sa_session"]
         self.apply_related(session, kwargs)
         item = self.get_item(info, kwargs.pop(self.pk_name))
 
@@ -434,7 +438,7 @@ class DeleteResolver(MutationResolver):
     def __call__(
         self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
     ) -> t.Any:
-        session: orm.Session = info.context
+        session: orm.Session = info.context["sa_session"]
         item = self.get_item(info, kwargs)
         session.delete(item)
         session.commit()

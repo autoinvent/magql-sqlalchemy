@@ -30,7 +30,7 @@ class ItemExistsValidator:
         if value is None:
             return
 
-        session: sa_orm.Session = info.context
+        session: sa_orm.Session = info.context["sa_session"]
         query = sa.select(sa.exists(sa.select(self.col).filter(self.col == value)))
 
         if not session.execute(query).scalar():
@@ -60,7 +60,7 @@ class ListExistsValidator:
         if value is None:
             return
 
-        session: sa_orm.Session = info.context
+        session: sa_orm.Session = info.context["sa_session"]
         # Select ids that match the input list of ids.
         query = sa.select(self.col).filter(self.col.in_(value))
         found = set(session.execute(query).scalars())
@@ -116,7 +116,7 @@ class UniqueValidator:
         self.errors: dict[str, str] = {k: message for k in keys}
 
     def __call__(self, info: GraphQLResolveInfo, data: t.Any) -> None:
-        session: sa_orm.Session = info.context
+        session: sa_orm.Session = info.context["sa_session"]
         filters = []
 
         if self.pk_name in data:

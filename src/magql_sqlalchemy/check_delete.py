@@ -49,7 +49,7 @@ class CheckDelete(BaseCheckDelete):
     def __call__(
         self, parent: t.Any, info: GraphQLResolveInfo, **kwargs: t.Any
     ) -> CheckDeleteResult:
-        session: sa_orm.Session = info.context
+        session: sa_orm.Session = info.context["sa_session"]
         model = self.managers[kwargs["type"]].model
         item = session.get(model, kwargs["id"])
         mapper: sa_orm.Mapper[t.Any] = sa_orm.object_mapper(item)
