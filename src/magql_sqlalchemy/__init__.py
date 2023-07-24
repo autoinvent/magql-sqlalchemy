@@ -1,4 +1,4 @@
-from .manager import ModelGroup
+from .group import ModelGroup
 from .manager import ModelManager
 
 __all__ = [
