@@ -49,8 +49,9 @@ class ModelManager:
     """
 
     item_field: magql.Field
-    """Query that selects a row by id from the database. The field name is the snake
-    case model name with ``_item`` appended. Uses :class:`.ItemResolver`.
+    """Query that selects a row by id from the database. Will return null if the
+    id doesn't exist. The field name is the snake case model name with ``_item``
+    appended. Uses :class:`.ItemResolver`.
 
     .. code-block:: text
 
@@ -247,7 +248,7 @@ class ModelManager:
 
         self.item_field = magql.Field(
             object,
-            args={"id": magql.Argument(pk_type, validators=[item_exists])},
+            args={"id": magql.Argument(pk_type.non_null)},
             resolve=ItemResolver(model),
         )
         self.list_result = magql.Object(
