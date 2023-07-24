@@ -25,11 +25,11 @@ class ModelResolver:
 
     def __init__(self, model: type[t.Any]) -> None:
         self.model = model
-        self.mapper: orm.Mapper[t.Any] = t.cast(orm.Mapper[t.Any], sa.inspect(model))
+        self._mapper: orm.Mapper[t.Any] = sa.inspect(model)  # pyright: ignore
         self.pk_name: str
         self.pk_col: sa.Column[t.Any]
         self.pk_name, self.pk_col = next(
-            x for x in self.mapper.columns.items() if x[1].primary_key
+            x for x in self._mapper.columns.items() if x[1].primary_key
         )
 
     def _load_relationships(
@@ -200,7 +200,7 @@ class ListResolver(QueryResolver):
 
             for filter_item in filter_group:
                 path, _, name = filter_item["path"].rpartition(".")
-                mapper = self.mapper
+                mapper = self._mapper
 
                 if path:
                     for path_part in path.split("."):
@@ -357,7 +357,7 @@ class MutationResolver(ModelResolver):
         """For all relationship arguments, replace the id values with their model
         instances.
         """
-        for key, rel in self.mapper.relationships.items():
+        for key, rel in self._mapper.relationships.items():
             value = kwargs.get(key)
 
             # skip missing, None, and empty list values

@@ -226,7 +226,7 @@ class ModelManager:
     def __init__(self, model: type[t.Any], search: bool = False) -> None:
         self.model = model
         model_name = model.__name__
-        mapper = t.cast(sa_orm.Mapper[t.Any], sa.inspect(model))
+        mapper: sa_orm.Mapper[t.Any] = sa_orm.class_mapper(model)  # pyright: ignore
         # Find the primary key column and its Magql type.
         pk_name, pk_col = next(x for x in mapper.columns.items() if x[1].primary_key)
         pk_type = _convert_column_type(model_name, pk_name, pk_col)
