@@ -11,6 +11,11 @@ dependencies = [
     "sqlalchemy>=2",
 ]
 
+[project.urls]
+Documentation = "https://magql-sqlalchemy.autoinvent.dev"
+Changes = "https://magql-sqlalchemy.autoinvent.dev/changes.html"
+Source = "https://github.com/autoinvent/magql-sqlalchemy/"
+
 [build-system]
 requires = ["flit_core<4"]
 build-backend = "flit_core.buildapi"
