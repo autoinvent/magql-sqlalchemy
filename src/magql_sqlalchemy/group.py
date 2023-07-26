@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-import typing as t
-
 import magql
 from magql.search import Search
 from sqlalchemy import orm as sa_orm
 
 from .check_delete import CheckDelete
 from .manager import ModelManager
-
-if t.TYPE_CHECKING:
-    import typing_extensions as te
 
 
 class ModelGroup:
@@ -42,22 +37,30 @@ class ModelGroup:
 
     @classmethod
     def from_declarative_base(
-        cls, base: sa_orm.DeclarativeMeta, search: set[type[t.Any] | str] | None = None
-    ) -> te.Self:
+        cls,
+        base: type[sa_orm.DeclarativeBase] | sa_orm.DeclarativeMeta,
+        *,
+        search: (
+            bool | set[type[sa_orm.DeclarativeBase] | sa_orm.DeclarativeMeta | str]
+        ) = True,
+    ) -> ModelGroup:
         """Create a group of model managers for all models in the given SQLAlchemy
         declarative base class.
 
         :param base: The SQLAlchemy declarative base class.
-        :param search: The set of models, as classes or names, to show in global search.
+        :param search: A bool to enable or disable search for all models. Or a
+            set of models or names.
         """
-        if search is None:
-            search = set()
-
         managers = []
 
         for mapper in base.registry.mappers:
             model = mapper.class_
-            model_search = model in search or model.__name__ in search
+
+            if isinstance(search, set):
+                model_search = model in search or model.__name__ in search
+            else:
+                model_search = search
+
             managers.append(ModelManager(model, search=model_search))
 
         return cls(managers)

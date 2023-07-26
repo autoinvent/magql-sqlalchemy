@@ -24,7 +24,7 @@ class ColumnSearchProvider:
         """The columns to search in."""
 
     def __call__(self, context: t.Any, value: str) -> list[SearchResult]:
-        session: sa_orm.Session = context
+        session: sa_orm.Session = context["sa_session"]
         value = prepare_contains(value)
         query = sa.select(self.model).filter(
             sa.or_(*(c.ilike(value, escape="/") for c in self.columns))
