@@ -24,13 +24,13 @@ class ModelResolver:
     """
 
     def __init__(self, model: type[t.Any]) -> None:
+        from .manager import _find_pk
+
         self.model = model
         self._mapper: orm.Mapper[t.Any] = sa.inspect(model)  # pyright: ignore
         self.pk_name: str
         self.pk_col: sa.Column[t.Any]
-        self.pk_name, self.pk_col = next(
-            x for x in self._mapper.columns.items() if x[1].primary_key
-        )
+        self.pk_name, self.pk_col = _find_pk(self.model.__name__, self._mapper.columns)
 
     def _load_relationships(
         self,
@@ -363,6 +363,8 @@ class MutationResolver(ModelResolver):
         """For all relationship arguments, replace the id values with their model
         instances.
         """
+        from .manager import _find_pk
+
         for key, rel in self._mapper.relationships.items():
             value = kwargs.get(key)
 
@@ -371,8 +373,8 @@ class MutationResolver(ModelResolver):
                 continue
 
             target_model = rel.entity.class_
-            target_pk_name, target_pk_col = next(
-                x for x in rel.mapper.columns.items() if x[1].primary_key
+            target_pk_name, target_pk_col = _find_pk(
+                target_model.__name__, rel.mapper.columns
             )
 
             if rel.direction == orm.MANYTOONE:

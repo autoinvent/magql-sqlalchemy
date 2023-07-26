@@ -142,7 +142,7 @@ class ModelManager:
         model_name = model.__name__
         mapper: sa_orm.Mapper[t.Any] = sa_orm.class_mapper(model)  # pyright: ignore
         # Find the primary key column and its Magql type.
-        pk_name, pk_col = next(x for x in mapper.columns.items() if x[1].primary_key)
+        pk_name, pk_col = _find_pk(model_name, mapper.columns)
         pk_type = _convert_column_type(model_name, pk_name, pk_col)
         self.object = object = magql.Object(model_name)
         item_exists = ItemExistsValidator(model, pk_name, pk_col)
@@ -182,9 +182,7 @@ class ModelManager:
             target_name = target_model.__name__
             # Assume a single primary key column for the input type. Can't use a local
             # foreign key because that won't exist for to-many.
-            target_pk_name, target_pk_col = next(
-                x for x in rel.mapper.columns.items() if x[1].primary_key
-            )
+            target_pk_name, target_pk_col = _find_pk(target_name, rel.mapper.columns)
             target_pk_type = _convert_column_type(
                 target_name, target_pk_name, target_pk_col
             )
@@ -309,6 +307,19 @@ class ModelManager:
         """
         if self.search_provider is not None:
             search.provider(self.search_provider)
+
+
+def _find_pk(
+    model_name: str, columns: sa.ColumnCollection[str, sa.Column[t.Any]]
+) -> tuple[str, sa.Column[t.Any]]:
+    """Find the first primary key column in a column collection."""
+    for name, column in columns.items():
+        if column.primary_key:
+            return name, column
+
+    # Can happen with __mapper_args__ = {"primary_key": [c]}. If we change to
+    # detect this, we can tell coverage to ignore the missed branch.
+    raise TypeError(f"No primary key on '{model_name}'.")
 
 
 def _convert_column_type(
