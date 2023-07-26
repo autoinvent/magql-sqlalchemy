@@ -222,15 +222,21 @@ class ListResolver(QueryResolver):
         return query.filter(sa.or_(*or_clauses))
 
     def apply_sort(
-        self, query: sql.Select[t.Any], sort_arg: list[tuple[str, bool]] | None = None
+        self, query: sql.Select[t.Any], sort_arg: list[str] | None = None
     ) -> sql.Select[t.Any]:
         if not sort_arg:
             return query.order_by(self.pk_col)
 
         out = []
 
-        for name, desc in sort_arg:
-            value: sa.Column[t.Any] = getattr(self.model, name)
+        for sort_item in sort_arg:
+            desc = sort_item[0] == "-"
+
+            if desc:
+                sort_item = sort_item[1:]
+
+            # TODO allow relationship paths like filters
+            value: sa.Column[t.Any] = getattr(self.model, sort_item)
 
             if not desc:
                 out.append(value.asc())

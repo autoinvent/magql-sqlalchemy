@@ -73,23 +73,6 @@ class ModelManager:
         }
     """
 
-    sort: magql.Enum
-    """The enum type representing all the sorts that can be applied to the list query.
-    The type name is the model name with ``Sort`` appended. For each column that
-    is not a foreign key, an ascending and descending value are generated. For example,
-    ``name_asc`` and ``name_desc``. In Python, the values are converted to
-    ``(name: str, desc: bool)`` tuples.
-
-    .. code-block:: text
-
-        enum ModelSort {
-            id_asc
-            id_desc
-            name_asc
-            name_desc
-        }
-    """
-
     list_field: magql.Field
     """Query that selects multiple rows from the database. The field name is the snake
     case model name with ``_list`` appended. Uses :class:`.ListResolver`.
@@ -99,7 +82,7 @@ class ModelManager:
         type Query {
             model_list(
                 filter: [[FilterItem!]!],
-                sort: [ModelSort!],
+                sort: [String!],
                 page: Int,
                 per_page: Int
             ): ModelListResult!
@@ -150,7 +133,11 @@ class ModelManager:
     behavior.
     """
 
-    def __init__(self, model: type[t.Any], search: bool = False) -> None:
+    def __init__(
+        self,
+        model: type[sa_orm.DeclarativeBase] | sa_orm.DeclarativeMeta,
+        search: bool = False,
+    ) -> None:
         self.model = model
         model_name = model.__name__
         mapper: sa_orm.Mapper[t.Any] = sa_orm.class_mapper(model)  # pyright: ignore
@@ -163,7 +150,6 @@ class ModelManager:
             pk_name: magql.Argument(pk_type.non_null, validators=[item_exists])
         }
         create_args: dict[str, magql.Argument] = {}
-        sort_items: dict[str, tuple[str, bool]] = {}
 
         for key, col in mapper.columns.items():
             # Foreign key columns are assumed to have relationships, handled later.
@@ -176,9 +162,6 @@ class ModelManager:
                 object.fields[key] = magql.Field(col_type)
             else:
                 object.fields[key] = magql.Field(col_type.non_null)
-
-            sort_items[f"{key}_asc"] = (key, False)
-            sort_items[f"{key}_desc"] = (key, True)
 
             # The primary key column is assumed to be generated, only used as an input
             # when querying an item by id.
@@ -258,12 +241,11 @@ class ModelManager:
                 "total": magql.Field(magql.Int.non_null),
             },
         )
-        self.sort = magql.Enum(f"{model_name}Sort", sort_items)
         self.list_field = magql.Field(
             self.list_result.non_null,
             args={
                 "filter": magql.Argument(filter_item.non_null.list.non_null.list),
-                "sort": magql.Argument(self.sort.non_null.list),
+                "sort": magql.Argument(magql.String.non_null.list),
                 "page": magql.Argument(magql.Int, validators=[validate_page]),
                 "per_page": magql.Argument(magql.Int, validators=[PerPageValidator()]),
             },
