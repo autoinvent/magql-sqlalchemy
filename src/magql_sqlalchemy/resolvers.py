@@ -50,8 +50,10 @@ class ModelResolver:
         :param load_path: During recursion, the SQLAlchemy load that has been performed
             to get to this relationship and should be extended.
         """
+        if node.selection_set is None:
+            return []
+
         out = []
-        assert node.selection_set is not None
 
         for selection in node.selection_set.selections:
             inner_node = t.cast(graphql.FieldNode, selection)
@@ -252,7 +254,7 @@ class ListResolver(QueryResolver):
         per_page: int | None,
     ) -> sql.Select[t.Any]:
         if page is None:
-            return query
+            page = 1
 
         if per_page is None:
             per_page = 10
@@ -347,7 +349,9 @@ class MutationResolver(ModelResolver):
     Subclasses must implement ``__call__``.
     """
 
-    def get_item(self, info: graphql.GraphQLResolveInfo, kwargs: t.Any) -> t.Any:
+    def get_item(
+        self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]
+    ) -> t.Any:
         """Get the model instance by primary key value."""
         return (
             info.context["sa_session"]
@@ -426,9 +430,12 @@ class UpdateResolver(MutationResolver):
     ) -> t.Any:
         session: orm.Session = info.context["sa_session"]
         self.apply_related(session, kwargs)
-        item = self.get_item(info, kwargs.pop(self.pk_name))
+        item = self.get_item(info, kwargs)
 
         for key, value in kwargs.items():
+            if key == self.pk_name:
+                continue
+
             setattr(item, key, value)
 
         session.commit()

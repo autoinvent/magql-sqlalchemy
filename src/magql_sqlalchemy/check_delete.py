@@ -10,7 +10,7 @@ from magql.check_delete import CheckDeleteResult
 from magql.search import SearchResult
 from magql.validators import ValidationError
 
-if t.TYPE_CHECKING:
+if t.TYPE_CHECKING:  # pragma: no cover
     from .manager import ModelManager
 
 
