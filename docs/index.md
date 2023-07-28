@@ -28,6 +28,11 @@ provides:
 ```{toctree}
 :hidden:
 
+start
+filters
+search
+check_delete
+model
 api
 changes
 license

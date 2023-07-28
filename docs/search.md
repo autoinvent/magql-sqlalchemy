@@ -1,0 +1,2 @@
+Global Search Query
+===================

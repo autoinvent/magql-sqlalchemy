@@ -1,0 +1,2 @@
+Preview Delete Effects Query
+============================
