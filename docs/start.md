@@ -125,9 +125,9 @@ a model. Let's look at what it created for the `Task` model:
 It also provides two global queries:
 
 *   `search` takes a value and searches all string columns in all models. A UI
-    could use this to provide a global search bar. See {doc}`search`.
+    could use this to provide a global search bar. See {doc}`q-search`.
 *   `check_delete(type, id)` takes a model name and row id and checks what would
-    be affected if the row was deleted. See {doc}`check_delete`.
+    be affected if the row was deleted. See {doc}`q-check_delete`.
 
 
 Customizing the Schema

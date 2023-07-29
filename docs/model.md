@@ -53,8 +53,31 @@ in {class}`magql.NonNull` appropriately for field and argument types.
 Relationships
 -------------
 
+For each relationship, a field will be generated on the object with the type of
+the related model's object. To-one relationships will be single objects, to-many
+relationships will be wrapped in {class}`magql.List`.
 
+Relationships are also available as arguments to the `model_create` and
+`model_update` mutation fields. In this case, they accept primary key value (or
+values), and validate that the referenced rows exists.
+
+When querying and selecting nested objects and fields across relationships,
+Magql-SQLAlchemy will generate efficient eager loads for the selected
+relationships. This means SQLAlchemy will emit a minimal number of queries to
+load all data. You can observe this by turing `echo=True` on for your
+SQLAlchemy engine.
 
 
 Validators
 ----------
+
+Two types of validators are automatically generated as needed:
+
+-   For each column marked `unique=True`, and for each `UniqueConstraint` that
+    applies to one or more columns, a validator will check that the values given
+    during create or update are unique. The validator can handle multiple
+    columns, defaults, and existing values for partial update. See
+    {class}`.UniqueValidator`.
+-   For each relationship, a validator will check that the given primary keys
+    exist, for to-one and to-many relationships. See
+    {class}`.ItemExistsValidator` and {class}`.ListExistsValidator`.

@@ -30,8 +30,8 @@ provides:
 
 start
 filters
-search
-check_delete
+q-search
+q-check_delete
 model
 api
 changes
