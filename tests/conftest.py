@@ -94,8 +94,7 @@ def session() -> t.Generator[sa_orm.Session, None, None]:
 class TPExecute(t.Protocol):
     def __call__(
         self, source: str, variables: dict[str, t.Any] | None = None
-    ) -> graphql.ExecutionResult:
-        ...
+    ) -> graphql.ExecutionResult: ...
 
 
 @pytest.fixture()
