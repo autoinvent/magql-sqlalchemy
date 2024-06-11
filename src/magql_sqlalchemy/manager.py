@@ -258,7 +258,10 @@ class ModelManager:
 
             unique_validators.append(
                 UniqueValidator(
-                    model, constraint.columns, pk_name, pk_col  # type: ignore[arg-type]
+                    model,
+                    constraint.columns,  # type: ignore[arg-type]
+                    pk_name,
+                    pk_col,
                 )
             )
 

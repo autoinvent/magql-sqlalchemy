@@ -12,11 +12,12 @@ import sqlalchemy.orm as sa_orm
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 
+from magql_sqlalchemy import ModelManager
+from magql_sqlalchemy.manager import camel_to_snake_case
+
 from .conftest import task_manager
 from .conftest import User
 from .conftest import user_manager
-from magql_sqlalchemy import ModelManager
-from magql_sqlalchemy.manager import camel_to_snake_case
 
 
 def test_object() -> None:
@@ -115,7 +116,7 @@ class Color(enum.Enum):
     blue = enum.auto()
 
 
-def test_convert_type():
+def test_convert_type() -> None:
     """Check each SQLAlchemy type that can be converted to a Magql type."""
 
     class Model(sa_orm.DeclarativeBase):
@@ -157,7 +158,7 @@ def test_convert_type():
     assert fields["uuid_data"].type is magql.String
 
 
-def test_no_primary_key_column():
+def test_no_primary_key_column() -> None:
     """We don't know how to convert a model that does not have a column marked
     as primary key directly.
     """

@@ -4,12 +4,13 @@ import pytest
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm import Session
 
+from magql_sqlalchemy import ModelGroup
+from magql_sqlalchemy import ModelManager
+
 from .conftest import Model
 from .conftest import Task
 from .conftest import TPExecute
 from .conftest import User
-from magql_sqlalchemy import ModelGroup
-from magql_sqlalchemy import ModelManager
 
 
 @pytest.mark.parametrize("search", [True, False])

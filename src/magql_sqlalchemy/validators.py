@@ -122,7 +122,7 @@ class UniqueValidator:
         if self.pk_name in data:
             # An update mutation will have the primary key in the input. Prevent the row
             # from matching itself, only check other rows.
-            item = session.get(self.model, data[self.pk_name])
+            item = session.get(self.model, data[self.pk_name])  # pyright: ignore
             filters.append(self.pk_col != data[self.pk_name])
 
             for key, col in self.columns.items():

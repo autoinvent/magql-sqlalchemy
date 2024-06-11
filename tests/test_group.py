@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import magql
 
+from magql_sqlalchemy import ModelGroup
+
 from .conftest import Model
 from .conftest import task_manager
 from .conftest import user_manager
-from magql_sqlalchemy import ModelGroup
 
 
 def test_managers_init() -> None:

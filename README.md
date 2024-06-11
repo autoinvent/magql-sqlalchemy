@@ -1,8 +1,7 @@
-Magql-SQLAlchemy
-================
+# Magql-SQLAlchemy
 
-[Magql][] is a [GraphQL][] framework for Python. It's pronounced "magical", and
-it is! This extension allows generating a complete API from [SQLAlchemy][]
+[Magql] is a [GraphQL] framework for Python. It's pronounced "magical", and
+it is! This extension allows generating a complete API from [SQLAlchemy]
 database models. After the schema is generated, it can be modified to add,
 remove, or change any behavior. Here's some of the features Magql-SQLAlchemy
 provides:

@@ -37,7 +37,7 @@ class User(Model):
         foreign_keys="Task.tagged_user_id", back_populates="tagged_user"
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.username
 
 
@@ -62,10 +62,10 @@ class Task(Model):
     children: Mapped[dict[str, Task]] = relationship(
         back_populates="parent",
         cascade="all",
-        collection_class=column_keyed_dict(message),  # pyright: ignore
+        collection_class=column_keyed_dict(message),  # type: ignore[arg-type]
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
 
@@ -94,8 +94,7 @@ def session() -> t.Generator[sa_orm.Session, None, None]:
 class TPExecute(t.Protocol):
     def __call__(
         self, source: str, variables: dict[str, t.Any] | None = None
-    ) -> graphql.ExecutionResult:
-        ...
+    ) -> graphql.ExecutionResult: ...
 
 
 @pytest.fixture()
