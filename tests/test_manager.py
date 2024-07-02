@@ -21,10 +21,16 @@ from .conftest import user_manager
 
 
 def test_object() -> None:
-    """The generated Object has expected properties."""
+    """The generated Object has expected properties, including object and field
+    descriptions pulled from model docstrings.
+    """
     type = user_manager.object
     assert type.name == "User"
+    assert type.description == "A user."
     assert type.fields.keys() == {"id", "username", "tasks", "tagged_tasks"}
+    assert type.fields["id"].description is None
+    assert type.fields["username"].description is not None
+    assert type.fields["tagged_tasks"].description is not None
     task_type = type.fields["tasks"].type
     assert isinstance(task_type, magql.NonNull)
     assert isinstance(task_type.type, magql.List)
