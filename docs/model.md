@@ -81,3 +81,25 @@ Two types of validators are automatically generated as needed:
 -   For each relationship, a validator will check that the given primary keys
     exist, for to-one and to-many relationships. See
     {class}`.ItemExistsValidator` and {class}`.ListExistsValidator`.
+
+
+## Documentation
+
+Descriptions are automatically taken from docstrings:
+
+-   A model docstring is used as the object description.
+-   An attribute docstring is used as the field, create, and update argument
+    descriptions.
+
+```python
+class Task(Model):
+    """A task describes work to be done."""
+
+    __tablename__ = "task"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    description: Mapped[str]
+    """What to do."""
+    user_id: Mapped[int] = mapped_column(ForeignKey(User.id))
+    user: Mapped[User] = relationship()
+    """The user doing the task."""
+```

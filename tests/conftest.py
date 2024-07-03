@@ -27,15 +27,19 @@ class Model(sa_orm.DeclarativeBase):
 
 
 class User(Model):
+    """A user."""
+
     __tablename__ = "user"
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(unique=True)
+    """The unique name used to log in the user."""
     tasks: Mapped[list[Task]] = relationship(
         foreign_keys="Task.user_id", back_populates="user"
     )
     tagged_tasks: Mapped[list[Task]] = relationship(
         foreign_keys="Task.tagged_user_id", back_populates="tagged_user"
     )
+    """Tasks that this user is tagged in."""
 
     def __str__(self) -> str:
         return self.username

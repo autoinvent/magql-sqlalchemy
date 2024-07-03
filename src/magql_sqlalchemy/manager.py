@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import ast
+import inspect
 import re
+import textwrap
 import typing as t
+from itertools import pairwise
 
 import magql.nodes
 import sqlalchemy as sa
@@ -144,7 +148,8 @@ class ModelManager:
         # Find the primary key column and its Magql type.
         pk_name, pk_col = _find_pk(model_name, mapper.columns)
         pk_type = _convert_column_type(model_name, pk_name, pk_col)
-        self.object = object = magql.Object(model_name)
+        self.object = object = magql.Object(model_name, description=get_obj_doc(model))
+        attr_docs = get_attr_docs(model)
         item_exists = ItemExistsValidator(model, pk_name, pk_col)
         update_args: dict[str, magql.Argument] = {
             pk_name: magql.Argument(pk_type.non_null, validators=[item_exists])
@@ -157,25 +162,26 @@ class ModelManager:
                 continue
 
             col_type = _convert_column_type(model_name, key, col)
+            doc = attr_docs.get(key)
 
             if col.nullable:
-                object.fields[key] = magql.Field(col_type)
+                object.fields[key] = magql.Field(col_type, description=doc)
             else:
-                object.fields[key] = magql.Field(col_type.non_null)
+                object.fields[key] = magql.Field(col_type.non_null, description=doc)
 
             # The primary key column is assumed to be generated, only used as an input
             # when querying an item by id.
             if col.primary_key:
                 continue
 
-            update_args[key] = magql.Argument(col_type)
+            update_args[key] = magql.Argument(col_type, description=doc)
 
             # When creating an object, a field is required if it's not nullable and
             # doesn't have a default value.
             if col.nullable or col.default:
-                create_args[key] = magql.Argument(col_type)
+                create_args[key] = magql.Argument(col_type, description=doc)
             else:
-                create_args[key] = magql.Argument(col_type.non_null)
+                create_args[key] = magql.Argument(col_type.non_null, description=doc)
 
         for key, rel in mapper.relationships.items():
             target_model = rel.entity.class_
@@ -186,6 +192,7 @@ class ModelManager:
             target_pk_type = _convert_column_type(
                 target_name, target_pk_name, target_pk_col
             )
+            doc = attr_docs.get(key)
 
             if rel.direction is sa_orm.MANYTOONE:
                 # To-one is like a column but with an object type instead of a scalar.
@@ -193,38 +200,46 @@ class ModelManager:
                 col = next(iter(rel.local_columns))  # type: ignore[arg-type]
 
                 if col.nullable:
-                    object.fields[key] = magql.Field(target_name)
+                    object.fields[key] = magql.Field(target_name, description=doc)
                 else:
-                    object.fields[key] = magql.Field(magql.NonNull(target_name))
+                    object.fields[key] = magql.Field(
+                        magql.NonNull(target_name), description=doc
+                    )
 
                 rel_item_exists = ItemExistsValidator(
                     target_model, target_pk_name, target_pk_col
                 )
                 update_args[key] = magql.Argument(
-                    target_pk_type, validators=[rel_item_exists]
+                    target_pk_type, validators=[rel_item_exists], description=doc
                 )
 
                 if col.nullable or col.default:
                     create_args[key] = magql.Argument(
-                        target_pk_type, validators=[rel_item_exists]
+                        target_pk_type, validators=[rel_item_exists], description=doc
                     )
                 else:
                     create_args[key] = magql.Argument(
-                        target_pk_type.non_null, validators=[rel_item_exists]
+                        target_pk_type.non_null,
+                        validators=[rel_item_exists],
+                        description=doc,
                     )
             else:
                 # To-many is a non-null list of non-null objects.
                 field_type = magql.NonNull(target_name).list.non_null
-                object.fields[key] = magql.Field(field_type)
+                object.fields[key] = magql.Field(field_type, description=doc)
                 # The input list can be empty or null, but the ids are non-null.
                 rel_list_exists = ListExistsValidator(
                     target_model, target_pk_name, target_pk_col
                 )
                 update_args[key] = magql.Argument(
-                    target_pk_type.non_null.list, validators=[rel_list_exists]
+                    target_pk_type.non_null.list,
+                    validators=[rel_list_exists],
+                    description=doc,
                 )
                 create_args[key] = magql.Argument(
-                    target_pk_type.non_null.list, validators=[rel_list_exists]
+                    target_pk_type.non_null.list,
+                    validators=[rel_list_exists],
+                    description=doc,
                 )
 
         self.item_field = magql.Field(
@@ -389,3 +404,58 @@ def camel_to_snake_case(name: str) -> str:
     """Convert a ``CamelCase`` name to ``snake_case``."""
     name = re.sub(r"((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))", r"_\1", name)
     return name.lower().lstrip("_")
+
+
+def get_obj_doc(obj: type[t.Any]) -> str | None:
+    """Return :func:`inspect.cleandoc` on ``obj.__doc__`` if it's set, otherwise
+    return None.
+    """
+    if obj.__doc__ is None:
+        return None
+
+    return inspect.cleandoc(obj.__doc__)
+
+
+def get_attr_docs(cls: type[t.Any]) -> dict[str, str]:
+    """Get any docstrings placed after attribute assignments in a class body.
+    This is a convention for documenting attributes, but is not exposed in the
+    Python runtime. Instead, parse the AST for the source text associated with
+    the class. Find string expressions after assignments, and record the value
+    for the name. Attributes without docs will not be present in the output.
+    """
+    cls_node = ast.parse(textwrap.dedent(inspect.getsource(cls))).body[0]
+
+    if not isinstance(cls_node, ast.ClassDef):
+        raise TypeError("Given object was not a class.")
+
+    out = {}
+
+    # Consider each pair of nodes to find docs after assignments.
+    for a, b in pairwise(cls_node.body):
+        # Must be an assignment and a constant string expr.
+        if (
+            not isinstance(a, ast.Assign | ast.AnnAssign)
+            or not isinstance(b, ast.Expr)
+            or not isinstance(b.value, ast.Constant)
+            or not isinstance(b.value.value, str)
+        ):
+            continue
+
+        doc = inspect.cleandoc(b.value.value)
+
+        if isinstance(a, ast.Assign):
+            # An assignment can have multiple targets (a = b = value). Shouldn't
+            # happen with models, but handle it.
+            targets = a.targets
+        else:
+            # An annotated assignment only has one target.
+            targets = [a.target]
+
+        for target in targets:
+            # Must be assigning to a plain name.
+            if not isinstance(target, ast.Name):
+                continue
+
+            out[target.id] = doc
+
+    return out
