@@ -163,9 +163,10 @@ class ListResolver(QueryResolver):
     once for large data sets. The default ``page`` is 1. The default ``per_page`` is
     10, with a max of 100.
 
-    The ``sort`` argument is a list of ``(name: str, desc: bool)`` items from the
-    :attr:`.ModelManager.sort` enum. By default the rows are sorted by their primary key
-    column, otherwise the order wouldn't be guaranteed consistent across pages.
+    The ``sort`` argument is a list of column names from the :attr:`.ModelManager.sort`
+    enum. By default the rows are sorted by their primary key column, otherwise the
+    order wouldn't be guaranteed consistent across pages. A name that begins with ``-``
+    sorts in descending order.
 
     Filtering applies one or more filter rules to the query. The ``filter`` argument is
     a list of lists of rules. Each rule is a ``{path, op, not, value}`` dict. The rules
