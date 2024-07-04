@@ -18,7 +18,7 @@ beautifulsoup4==4.12.3
     #   furo
 cachetools==5.3.3
     # via tox
-certifi==2024.6.2
+certifi==2024.7.4
     # via
     #   -r docs.txt
     #   requests
@@ -46,7 +46,7 @@ exceptiongroup==1.2.1
     #   -r tests.txt
     #   -r typing.txt
     #   pytest
-filelock==3.14.0
+filelock==3.15.4
     # via
     #   tox
     #   virtualenv
@@ -128,9 +128,9 @@ pygments==2.18.0
     #   -r docs.txt
     #   furo
     #   sphinx
-pyproject-api==1.6.1
+pyproject-api==1.7.1
     # via tox
-pyright==1.1.369
+pyright==1.1.370
     # via -r typing.txt
 pytest==8.2.2
     # via
@@ -200,7 +200,7 @@ tomli==2.0.1
     #   pytest
     #   sphinx
     #   tox
-tox==4.15.1
+tox==4.16.0
     # via -r dev.in
 types-python-dateutil==2.9.0.20240316
     # via -r typing.txt
@@ -212,7 +212,7 @@ urllib3==2.2.2
     # via
     #   -r docs.txt
     #   requests
-virtualenv==20.26.2
+virtualenv==20.26.3
     # via
     #   pre-commit
     #   tox
