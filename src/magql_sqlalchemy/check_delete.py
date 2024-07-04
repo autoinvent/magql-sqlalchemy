@@ -51,7 +51,7 @@ class CheckDelete(BaseCheckDelete):
     ) -> CheckDeleteResult:
         session: sa_orm.Session = info.context["sa_session"]
         model = self.managers[kwargs["type"]].model
-        item = session.get(model, kwargs["id"])
+        item = session.get(model, kwargs["id"])  # pyright: ignore
         mapper: sa_orm.Mapper[t.Any] = sa_orm.object_mapper(item)  # pyright: ignore
         rel: sa_orm.RelationshipProperty[t.Any]  # pyright: ignore
         result = CheckDeleteResult()
