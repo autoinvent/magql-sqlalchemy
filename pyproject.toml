@@ -1,6 +1,6 @@
 [project]
 name = "magql-sqlalchemy"
-version = "1.1.0.dev"
+version = "1.1.0"
 description = "Generate a Magql GraphQL API from SQLAlchemy models."
 readme = "README.md"
 license = { file = "LICENSE.txt" }
