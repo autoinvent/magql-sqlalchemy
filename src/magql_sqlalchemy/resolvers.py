@@ -217,28 +217,13 @@ class ListResolver(QueryResolver):
             return query
 
         # TODO use aliases to support filtering on different paths to the same model
-        seen: set[str] = set()
         or_clauses = []
 
         for filter_group in filter_arg:
             and_clauses = []
 
             for filter_item in filter_group:
-                path, _, name = filter_item["path"].rpartition(".")
-                mapper = self._mapper
-
-                if path:
-                    for path_part in path.split("."):
-                        rel = mapper.relationships[path_part]
-                        mapper = rel.mapper
-
-                        if path_part in seen:
-                            continue
-
-                        seen.add(path_part)
-                        query = query.join(rel.class_attribute)
-
-                col = mapper.columns[name]
+                query, col = self._process_join_path(filter_item["path"], query)
                 clause = filters.apply_filter_item(col, filter_item)
                 and_clauses.append(clause)
 
@@ -255,20 +240,41 @@ class ListResolver(QueryResolver):
         out = []
 
         for sort_item in sort_arg:
-            desc = sort_item[0] == "-"
-
-            if desc:
+            if desc := sort_item[0] == "-":
                 sort_item = sort_item[1:]
 
-            # TODO allow relationship paths like filters
-            value: sa.Column[t.Any] = getattr(self.model, sort_item)
+            query, col = self._process_join_path(sort_item, query)
 
             if not desc:
-                out.append(value.asc())
+                out.append(col.asc())
             else:
-                out.append(value.desc())
+                out.append(col.desc())
 
         return query.order_by(*out)
+
+    def _process_join_path(
+        self, path: str, query: sql.Select[t.Any]
+    ) -> tuple[sql.Select[t.Any], sa.Column[t.Any]]:
+        """A filter or sort path may be a dotted path across one or more
+        relationships. For example, ``task.user.name``. Given a path, apply any
+        joins to get to the related model, then get the referenced column from
+        that model.
+
+        :param path: The dotted path to process, like `task.user.name`.
+        :param query: The query to apply joins to.
+        :return: The new query, and the indicated column.
+        """
+        path, _, name = path.rpartition(".")
+        mapper = self._mapper
+
+        if path:
+            for path_part in path.split("."):
+                rel = mapper.relationships[path_part]
+                mapper = rel.mapper
+                query = query.join(rel.class_attribute)
+
+        col = mapper.columns[name]
+        return query, col
 
     def apply_page(
         self,

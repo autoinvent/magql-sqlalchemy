@@ -108,8 +108,9 @@ a model. Let's look at what it created for the `Task` model:
     and a total count. See {attr}`ModelManager.list_field`.
     *   The `filter` argument can apply filters to any column, including across
         relationships; see {doc}`filters`.
-    *   The `sort` argument can be one or more column names to sort by. A name
-        can begin with `-` to sort descending. Defaults to the primary key.
+    *   The `sort` argument can be one or more column names to sort by, including
+        across relationships like filters. A name can begin with `-` to sort
+        descending. Defaults to the primary key.
     *   The `page` and `per_page` arguments apply pagination, defaulting to page
         1 with 10 per page. Currently, pagination cannot be disabled and has a
         max of 100 per page.

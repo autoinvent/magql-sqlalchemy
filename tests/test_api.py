@@ -31,11 +31,41 @@ def test_item_missing(schema_execute: TPExecute) -> None:
 
 
 def test_list(schema_execute: TPExecute) -> None:
-    result = schema_execute("{ task_list { items { id } total } }")
+    result = schema_execute("{ task_list { items { id message } total } }")
     assert result.errors is None
     assert result.data is not None
-    assert result.data["task_list"]["total"] == 101
-    assert len(result.data["task_list"]["items"]) == 10
+    data = result.data["task_list"]
+    items = data["items"]
+    assert data["total"] == 101
+    assert len(items) == 10
+    # The first few items sorted by id.
+    assert items[0]["id"] == 1
+    assert items[1]["id"] == 2
+
+
+def test_filter_path(schema_execute: TPExecute) -> None:
+    """Filter across relationship."""
+    result = schema_execute(
+        '{ task_list(filter: { path: "user.username", op: "eq", value: "ex1" })'
+        " { items { message } } }"
+    )
+    assert result.errors is None
+    assert result.data is not None
+    items = result.data["task_list"]["items"]
+    assert len(items) == 1
+    assert items[0]["message"] == "ex1"
+
+
+def test_sort_path(schema_execute: TPExecute) -> None:
+    """Sort across relationship."""
+    result = schema_execute(
+        '{ task_list(sort: ["-user.username", "-message"]) { items { id message } } }'
+    )
+    assert result.errors is None
+    assert result.data is not None
+    items = result.data["task_list"]["items"]
+    assert items[0]["message"] == "ex1"
+    assert items[1]["message"] == "a99"
 
 
 def test_create(schema_execute: TPExecute) -> None:
