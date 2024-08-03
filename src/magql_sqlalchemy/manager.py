@@ -27,8 +27,10 @@ from .validators import ItemExistsValidator
 from .validators import ListExistsValidator
 from .validators import UniqueValidator
 
+M = t.TypeVar("M", bound=sa_orm.DeclarativeBase)
 
-class ModelManager:
+
+class ModelManager(t.Generic[M]):
     """The API for a single SQLAlchemy model class. Generates Magql types, fields,
     resolvers, etc. These are exposed as attributes on this manager, and can be further
     customized after generation.
@@ -37,7 +39,7 @@ class ModelManager:
     :param search: Whether this model will provide results in global search.
     """
 
-    model: type[t.Any]
+    model: type[M]
     """The SQLAlchemy model class."""
 
     object: magql.Object
@@ -137,14 +139,10 @@ class ModelManager:
     behavior.
     """
 
-    def __init__(
-        self,
-        model: type[sa_orm.DeclarativeBase] | sa_orm.DeclarativeMeta,
-        search: bool = False,
-    ) -> None:
+    def __init__(self, model: type[M], search: bool = False) -> None:
         self.model = model
         model_name = model.__name__
-        mapper: sa_orm.Mapper[t.Any] = sa_orm.class_mapper(model)  # pyright: ignore
+        mapper: sa_orm.Mapper[M] = sa_orm.class_mapper(model)  # pyright: ignore
         # Find the primary key column and its Magql type.
         pk_name, pk_col = _find_pk(model_name, mapper.columns)
         pk_type = _convert_column_type(model_name, pk_name, pk_col)

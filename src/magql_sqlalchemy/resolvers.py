@@ -11,8 +11,10 @@ from sqlalchemy.engine import Result
 
 from . import filters
 
+M = t.TypeVar("M", bound=orm.DeclarativeBase)
 
-class ModelResolver:
+
+class ModelResolver(t.Generic[M]):
     """Base class for the SQLAlchemy model API resolvers used by :class:`.ModelManager`.
     Subclasses must implement ``__call__``.
 
@@ -23,11 +25,11 @@ class ModelResolver:
     key ``sa_session` set to the SQLAlchemy session.
     """
 
-    def __init__(self, model: type[t.Any]) -> None:
+    def __init__(self, model: type[M]) -> None:
         from .manager import _find_pk
 
         self.model = model
-        self._mapper: orm.Mapper[t.Any] = sa.inspect(model)  # pyright: ignore
+        self._mapper: orm.Mapper[M] = sa.inspect(model)
         self.pk_name: str
         self.pk_col: sa.Column[t.Any]
         self.pk_name, self.pk_col = _find_pk(self.model.__name__, self._mapper.columns)
@@ -38,7 +40,7 @@ class ModelResolver:
         node: graphql.FieldNode
         | graphql.FragmentDefinitionNode
         | graphql.InlineFragmentNode,
-        model: t.Any,
+        model: type[t.Any],
         load_path: orm.Load | None = None,
     ) -> list[orm.Load]:
         """Given the AST node representing the GraphQL operation, find all the
@@ -125,7 +127,7 @@ class ModelResolver:
         raise NotImplementedError
 
 
-class QueryResolver(ModelResolver):
+class QueryResolver(ModelResolver[M]):
     """Base class for SQLAlchemy model API queries used by :class:`.ModelManager`.
     Subclasses must implement :meth:`build_query` and :meth:`transform_result`, and can
     override ``__call__``.
@@ -133,11 +135,11 @@ class QueryResolver(ModelResolver):
 
     def build_query(
         self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
-    ) -> sql.Select[t.Any]:
+    ) -> sql.Select[tuple[M]]:
         """Build the query to execute."""
         raise NotImplementedError
 
-    def transform_result(self, result: Result[t.Any]) -> t.Any:
+    def transform_result(self, result: Result[tuple[M]]) -> t.Any:
         """Get the model instance or list of instances from a SQLAlchemy result."""
         raise NotImplementedError
 
@@ -151,7 +153,7 @@ class QueryResolver(ModelResolver):
         return self.transform_result(result)
 
 
-class ItemResolver(QueryResolver):
+class ItemResolver(QueryResolver[M]):
     """Get a single row from the database by id. Used by
     :attr:`.ModelManager.item_field`. ``id`` is the only GraphQL argument. Returns a
     single model instance, or ``None`` if the id wasn't found.
@@ -161,7 +163,7 @@ class ItemResolver(QueryResolver):
 
     def build_query(
         self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
-    ) -> sql.Select[t.Any]:
+    ) -> sql.Select[tuple[M]]:
         field_node = _get_field_node(info)
         load = self._load_relationships(info, field_node, self.model)
         return (
@@ -170,11 +172,11 @@ class ItemResolver(QueryResolver):
             .where(self.pk_col == kwargs[self.pk_name])
         )
 
-    def transform_result(self, result: Result[t.Any]) -> t.Any:
+    def transform_result(self, result: Result[tuple[M]]) -> t.Any:
         return result.scalar_one_or_none()
 
 
-class ListResolver(QueryResolver):
+class ListResolver(QueryResolver[M]):
     """Get a list of rows from the database, with support for filtering, sorting, and
     pagination. If any relationships, arbitrarily nested, are selected, they are
     eagerly loaded to Used by :attr:`.ModelManager.list_field`. Returns a
@@ -210,9 +212,9 @@ class ListResolver(QueryResolver):
 
     def apply_filter(
         self,
-        query: sql.Select[t.Any],
+        query: sql.Select[tuple[M]],
         filter_arg: list[list[dict[str, t.Any]]] | None,
-    ) -> sql.Select[t.Any]:
+    ) -> sql.Select[tuple[M]]:
         if not filter_arg:
             return query
 
@@ -232,8 +234,8 @@ class ListResolver(QueryResolver):
         return query.filter(sa.or_(*or_clauses))
 
     def apply_sort(
-        self, query: sql.Select[t.Any], sort_arg: list[str] | None = None
-    ) -> sql.Select[t.Any]:
+        self, query: sql.Select[tuple[M]], sort_arg: list[str] | None = None
+    ) -> sql.Select[tuple[M]]:
         if not sort_arg:
             return query.order_by(self.pk_col)
 
@@ -253,8 +255,8 @@ class ListResolver(QueryResolver):
         return query.order_by(*out)
 
     def _process_join_path(
-        self, path: str, query: sql.Select[t.Any]
-    ) -> tuple[sql.Select[t.Any], sa.Column[t.Any]]:
+        self, path: str, query: sql.Select[tuple[M]]
+    ) -> tuple[sql.Select[tuple[M]], sa.Column[t.Any]]:
         """A filter or sort path may be a dotted path across one or more
         relationships. For example, ``task.user.name``. Given a path, apply any
         joins to get to the related model, then get the referenced column from
@@ -278,10 +280,10 @@ class ListResolver(QueryResolver):
 
     def apply_page(
         self,
-        query: sql.Select[t.Any],
+        query: sql.Select[tuple[M]],
         page: t.Any | None,
         per_page: int | None,
-    ) -> sql.Select[t.Any]:
+    ) -> sql.Select[tuple[M]]:
         if page is None:
             page = 1
 
@@ -293,7 +295,7 @@ class ListResolver(QueryResolver):
 
     def build_query(
         self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
-    ) -> sql.Select[t.Any]:
+    ) -> sql.Select[tuple[M]]:
         field_node = _get_field_node(info, list_name="items")
         load = self._load_relationships(info, field_node, self.model)
         query = sa.select(self.model).options(*load)
@@ -302,11 +304,11 @@ class ListResolver(QueryResolver):
         query = self.apply_page(query, kwargs.get("page"), kwargs.get("per_page"))
         return query
 
-    def get_items(self, session: orm.Session, query: sql.Select[t.Any]) -> list[t.Any]:
+    def get_items(self, session: orm.Session, query: sql.Select[tuple[M]]) -> list[M]:
         result = session.execute(query)
         return result.scalars().all()  # type: ignore[return-value]
 
-    def get_count(self, session: orm.Session, query: sql.Select[t.Any]) -> int:
+    def get_count(self, session: orm.Session, query: sql.Select[tuple[M]]) -> int:
         """After generating the query with any filters, get the total row count for
         pagination purposes. Remove any eager loads, sorts, and pagination, then execute
         a SQL ``count()`` query.
@@ -335,13 +337,13 @@ class ListResolver(QueryResolver):
 
 
 @dataclasses.dataclass()
-class ListResult:
+class ListResult(t.Generic[M]):
     """The return value for :class:`ListResolver` and :attr:`.ModelManager.list_field`.
     :attr:`.ModelManager.list_result` is the Magql type corresponding to this Python
     type.
     """
 
-    items: list[t.Any]
+    items: list[M]
     """The list of model instances for this page."""
 
     total: int
@@ -422,14 +424,12 @@ def _get_list_root(
     return t.cast(graphql.FieldNode, node)
 
 
-class MutationResolver(ModelResolver):
+class MutationResolver(ModelResolver[M]):
     """Base class for SQLAlchemy model API mutations used by :class:`.ModelManager`.
     Subclasses must implement ``__call__``.
     """
 
-    def get_item(
-        self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]
-    ) -> t.Any:
+    def get_item(self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]) -> M:
         """Get the model instance by primary key value."""
         session = _get_sa_session(info)
         field_node = _get_field_node(info)
@@ -442,7 +442,7 @@ class MutationResolver(ModelResolver):
 
     def prepare_item(
         self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]
-    ) -> t.Any:
+    ) -> M:
         """Get and modify the model instance in the SQLAlchemy session, but do
         not commit the session. Calling the resolver calls this and then calls
         commit, but this can be used directly when wrapping the resolver with
@@ -492,7 +492,7 @@ class MutationResolver(ModelResolver):
         return item
 
 
-class CreateResolver(MutationResolver):
+class CreateResolver(MutationResolver[M]):
     """Create a new row in the database. Used by :attr:`.ModelManager.create_field`. The
     field has arguments for each of the model's column attributes. An argument is not
     required if its column is nullable or has a default. Unique constraints on will
@@ -503,7 +503,7 @@ class CreateResolver(MutationResolver):
 
     def prepare_item(
         self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]
-    ) -> t.Any:
+    ) -> M:
         session = _get_sa_session(info)
         self.apply_related(session, kwargs)
         item = self.model(**kwargs)
@@ -511,7 +511,7 @@ class CreateResolver(MutationResolver):
         return item
 
 
-class UpdateResolver(MutationResolver):
+class UpdateResolver(MutationResolver[M]):
     """Updates a row in the database by id. Used by :attr:`.ModelManager.update_field`.
     The field has arguments for each of the model's column attributes. Only the primary
     key argument is required. Columns are only updated if a value is provided, which is
@@ -523,7 +523,7 @@ class UpdateResolver(MutationResolver):
 
     def prepare_item(
         self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]
-    ) -> t.Any:
+    ) -> M:
         session = _get_sa_session(info)
         self.apply_related(session, kwargs)
         item = self.get_item(info, kwargs)
@@ -537,7 +537,7 @@ class UpdateResolver(MutationResolver):
         return item
 
 
-class DeleteResolver(MutationResolver):
+class DeleteResolver(MutationResolver[M]):
     """Deletes a row in the database by id. Used by :attr:`.ModelManager.update_field`.
     Use the :class:`.CheckDelete` API first to check if the row can be safely deleted.
     Returns ``True``.
@@ -547,7 +547,7 @@ class DeleteResolver(MutationResolver):
 
     def prepare_item(
         self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]
-    ) -> t.Any:
+    ) -> M:
         session = _get_sa_session(info)
         item = self.get_item(info, kwargs)
         session.delete(item)
