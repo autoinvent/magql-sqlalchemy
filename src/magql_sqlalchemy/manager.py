@@ -30,6 +30,12 @@ from .validators import UniqueValidator
 M = t.TypeVar("M", bound=sa_orm.DeclarativeBase)
 
 
+class ResolverFactory(t.Protocol):
+    def __call__(
+        self, model: type[sa_orm.DeclarativeBase]
+    ) -> magql.nodes.ResolverCallable: ...
+
+
 class ModelManager(t.Generic[M]):
     """The API for a single SQLAlchemy model class. Generates Magql types, fields,
     resolvers, etc. These are exposed as attributes on this manager, and can be further
@@ -37,6 +43,41 @@ class ModelManager(t.Generic[M]):
 
     :param model: The SQLAlchemy model class.
     :param search: Whether this model will provide results in global search.
+    """
+
+    item_factory: t.ClassVar[ResolverFactory] = ItemResolver
+    """Callable that takes the model class and creates the resolver callable for
+    :attr:`item_field`.
+
+    .. versionadded:: 1.1
+    """
+
+    list_factory: t.ClassVar[ResolverFactory] = ListResolver
+    """Callable that takes the model class and creates the resolver callable for
+    :attr:`list_field`.
+
+    .. versionadded:: 1.1
+    """
+
+    create_factory: t.ClassVar[ResolverFactory] = CreateResolver
+    """Callable that takes the model class and creates the resolver callable for
+    :attr:`create_field`.
+
+    .. versionadded:: 1.1
+    """
+
+    update_factory: t.ClassVar[ResolverFactory] = UpdateResolver
+    """Callable that takes the model class and creates the resolver callable for
+    :attr:`update_field`.
+
+    .. versionadded:: 1.1
+    """
+
+    delete_factory: t.ClassVar[ResolverFactory] = DeleteResolver
+    """Callable that takes the model class and creates the resolver callable for
+    :attr:`delete_field`.
+
+    .. versionadded:: 1.1
     """
 
     model: type[M]
@@ -243,7 +284,7 @@ class ModelManager(t.Generic[M]):
         self.item_field = magql.Field(
             object,
             args={"id": magql.Argument(pk_type.non_null)},
-            resolve=ItemResolver(model),
+            resolve=self.item_factory(model),
         )
         self.list_result = magql.Object(
             f"{model_name}ListResult",
@@ -260,7 +301,7 @@ class ModelManager(t.Generic[M]):
                 "page": magql.Argument(magql.Int, validators=[validate_page]),
                 "per_page": magql.Argument(magql.Int, validators=[PerPageValidator()]),
             },
-            resolve=ListResolver(model),
+            resolve=self.list_factory(model),
         )
         unique_validators = []
         local_table = t.cast(sa.Table, mapper.local_table)
@@ -281,19 +322,19 @@ class ModelManager(t.Generic[M]):
         self.create_field = magql.Field(
             self.object.non_null,
             args=create_args,  # type: ignore[arg-type]
-            resolve=CreateResolver(model),
+            resolve=self.create_factory(model),
             validators=[*unique_validators],
         )
         self.update_field = magql.Field(
             self.object.non_null,
             args=update_args,  # type: ignore[arg-type]
-            resolve=UpdateResolver(model),
+            resolve=self.update_factory(model),
             validators=[*unique_validators],
         )
         self.delete_field = magql.Field(
             magql.Boolean.non_null,
             args={pk_name: magql.Argument(pk_type.non_null, validators=[item_exists])},
-            resolve=DeleteResolver(model),
+            resolve=self.delete_factory(model),
         )
 
         if search:
