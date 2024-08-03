@@ -1,6 +1,6 @@
 ## Version 1.1.0
 
-Unreleased
+Released 2024-08-03
 
 -   The description for a model's object, and for an attribute's field and
     argument, is set from their docstrings. {issue}`19`
