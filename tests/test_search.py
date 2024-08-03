@@ -7,9 +7,9 @@ from sqlalchemy.orm import Session
 from magql_sqlalchemy import ModelGroup
 from magql_sqlalchemy import ModelManager
 
+from .conftest import Execute
 from .conftest import Model
 from .conftest import Task
-from .conftest import TPExecute
 from .conftest import User
 
 
@@ -34,12 +34,11 @@ def test_group_enable_some(ref: type[DeclarativeBase] | str) -> None:
     assert group.managers["Task"].search_provider is None
 
 
-def test_search(session: Session, schema_execute: TPExecute) -> None:
+def test_search(session: Session, execute: Execute) -> None:
     session.add(Task(message="test magql", user=User(username="magql")))
     session.commit()
-    result = schema_execute("""{ search(value: "gql") { type id value } }""")
-    assert result.errors is None
-    assert result.data == {
+    result = execute.expect_data("""{ search(value: "gql") { type id value } }""")
+    assert result == {
         "search": [
             {"type": "User", "id": "1", "value": "magql"},
             {"type": "Task", "id": "1", "value": "test magql"},

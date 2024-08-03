@@ -9,6 +9,10 @@ import magql
 import pytest
 import sqlalchemy as sa
 import sqlalchemy.orm as sa_orm
+from magql.testing import expect_data
+from magql.testing import expect_error
+from magql.testing import expect_errors
+from magql.testing import expect_validation_error
 from sqlalchemy.orm import column_keyed_dict
 from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
@@ -95,19 +99,23 @@ def session() -> t.Generator[sa_orm.Session, None, None]:
     connection.close()
 
 
-class TPExecute(t.Protocol):
-    def __call__(
-        self, source: str, variables: dict[str, t.Any] | None = None
-    ) -> graphql.ExecutionResult: ...
+class Execute:
+    def __init__(self, session: sa_orm.Session) -> None:
+        self._context = {"sa_session": session}
+
+    def expect_data(self, source, **kwargs) -> dict[str, t.Any]:
+        return expect_data(schema, source, context=self._context, **kwargs)
+
+    def expect_errors(self, source, **kwargs) -> list[graphql.GraphQLError]:
+        return expect_errors(schema, source, context=self._context, **kwargs)
+
+    def expect_error(self, source, **kwargs) -> graphql.GraphQLError:
+        return expect_error(schema, source, context=self._context, **kwargs)
+
+    def expect_validation_error(self, source, **kwargs) -> dict[str, t.Any]:
+        return expect_validation_error(schema, source, context=self._context, **kwargs)
 
 
 @pytest.fixture()
-def schema_execute(session: sa_orm.Session) -> TPExecute:
-    def schema_execute(
-        source: str, variables: dict[str, t.Any] | None = None
-    ) -> graphql.ExecutionResult:
-        return schema.execute(
-            source, variables=variables, context={"sa_session": session}
-        )
-
-    return schema_execute
+def execute(session: sa_orm.Session) -> Execute:
+    return Execute(session)
