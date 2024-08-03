@@ -14,6 +14,10 @@ Unreleased
     extra behavior. {issue}`25`
 -   Resolver classes and `ModelManager`, and their methods, are generic on the
     model class passed to them.
+-   `ModelManager` has class attributes to override the
+    item/list/create/update/delete resolver factories. `ModelGroup` has a class
+    attribute to override the manager class. This can be used to customize the
+    default behaviors. {issue}`26`
 
 
 ## Version 1.0.0

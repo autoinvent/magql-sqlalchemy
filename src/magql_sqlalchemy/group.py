@@ -21,6 +21,12 @@ class ModelGroup:
     :param managers: The model managers that are part of this group.
     """
 
+    manager_class: t.ClassVar[type[ModelManager[t.Any]]] = ModelManager
+    """The manager class to use for each model.
+
+    .. versionadded:: 1.1
+    """
+
     def __init__(self, managers: list[ModelManager[t.Any]] | None = None) -> None:
         self.managers: dict[str, ModelManager[t.Any]] = {}
         """Maps SQLAlchemy model names to their :class:`ModelManager` instance. Use
@@ -61,7 +67,7 @@ class ModelGroup:
             else:
                 model_search = search
 
-            managers.append(ModelManager(model, search=model_search))
+            managers.append(cls.manager_class(model, search=model_search))
 
         return cls(managers)
 
