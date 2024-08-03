@@ -103,3 +103,23 @@ class Task(Model):
     user: Mapped[User] = relationship()
     """The user doing the task."""
 ```
+
+
+## Standard Display Value
+
+The generated object will have a `_display_value` field which calls
+`str(model)`. This is useful for links to related objects in a UI, since it is a
+common field that all models will have. The `search` and `check_delete` queries
+do the same thing with their generic results.
+
+For example, to display users with their username, override the `__str__` method.
+
+```python
+class User(Model):
+    __tablename__ = "user"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(unique=True)
+
+    def __str__(self) -> str:
+        return self.username
+```

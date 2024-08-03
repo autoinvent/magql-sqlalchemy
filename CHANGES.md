@@ -18,6 +18,8 @@ Unreleased
     item/list/create/update/delete resolver factories. `ModelGroup` has a class
     attribute to override the manager class. This can be used to customize the
     default behaviors. {issue}`26`
+-   Every generated object has a `_display_value` field that returns `str(obj)`.
+    {issue}`32`
 
 
 ## Version 1.0.0

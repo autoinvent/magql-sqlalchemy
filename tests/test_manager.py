@@ -27,7 +27,13 @@ def test_object() -> None:
     type = user_manager.object
     assert type.name == "User"
     assert type.description == "A user."
-    assert type.fields.keys() == {"id", "username", "tasks", "tagged_tasks"}
+    assert type.fields.keys() == {
+        "id",
+        "username",
+        "tasks",
+        "tagged_tasks",
+        "_display_value",
+    }
     assert type.fields["id"].description is None
     assert type.fields["username"].description is not None
     assert type.fields["tagged_tasks"].description is not None

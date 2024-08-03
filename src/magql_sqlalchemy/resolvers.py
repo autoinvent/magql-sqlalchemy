@@ -560,6 +560,12 @@ class DeleteResolver(MutationResolver[M]):
         return True
 
 
+def resolve_display_value(
+    parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
+) -> str:
+    return str(parent)
+
+
 def _get_sa_session(info: graphql.GraphQLResolveInfo) -> orm.Session:
     """Get the SQLAlchemy session from the context."""
 
