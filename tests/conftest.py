@@ -103,16 +103,16 @@ class Execute:
     def __init__(self, session: sa_orm.Session) -> None:
         self._context = {"sa_session": session}
 
-    def expect_data(self, source, **kwargs) -> dict[str, t.Any]:
+    def expect_data(self, source: str, **kwargs: t.Any) -> dict[str, t.Any]:
         return expect_data(schema, source, context=self._context, **kwargs)
 
-    def expect_errors(self, source, **kwargs) -> list[graphql.GraphQLError]:
+    def expect_errors(self, source: str, **kwargs: t.Any) -> list[graphql.GraphQLError]:
         return expect_errors(schema, source, context=self._context, **kwargs)
 
-    def expect_error(self, source, **kwargs) -> graphql.GraphQLError:
+    def expect_error(self, source: str, **kwargs: t.Any) -> graphql.GraphQLError:
         return expect_error(schema, source, context=self._context, **kwargs)
 
-    def expect_validation_error(self, source, **kwargs) -> dict[str, t.Any]:
+    def expect_validation_error(self, source: str, **kwargs: t.Any) -> dict[str, t.Any]:
         return expect_validation_error(schema, source, context=self._context, **kwargs)
 
 
