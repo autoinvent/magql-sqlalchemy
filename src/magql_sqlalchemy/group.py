@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import typing as t
+
 import magql
 from magql.search import Search
 from sqlalchemy import orm as sa_orm
@@ -19,8 +21,8 @@ class ModelGroup:
     :param managers: The model managers that are part of this group.
     """
 
-    def __init__(self, managers: list[ModelManager] | None = None) -> None:
-        self.managers: dict[str, ModelManager] = {}
+    def __init__(self, managers: list[ModelManager[t.Any]] | None = None) -> None:
+        self.managers: dict[str, ModelManager[t.Any]] = {}
         """Maps SQLAlchemy model names to their :class:`ModelManager` instance. Use
         :meth:`add_manager` to add to this.
         """
@@ -38,11 +40,9 @@ class ModelGroup:
     @classmethod
     def from_declarative_base(
         cls,
-        base: type[sa_orm.DeclarativeBase] | sa_orm.DeclarativeMeta,
+        base: type[sa_orm.DeclarativeBase],
         *,
-        search: (
-            bool | set[type[sa_orm.DeclarativeBase] | sa_orm.DeclarativeMeta | str]
-        ) = True,
+        search: bool | set[type[sa_orm.DeclarativeBase] | str] = True,
     ) -> ModelGroup:
         """Create a group of model managers for all models in the given SQLAlchemy
         declarative base class.
@@ -65,7 +65,7 @@ class ModelGroup:
 
         return cls(managers)
 
-    def add_manager(self, manager: ModelManager) -> None:
+    def add_manager(self, manager: ModelManager[t.Any]) -> None:
         """Add another model manager after the group was created.
 
         :param manager: The model manager to add.

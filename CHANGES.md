@@ -12,6 +12,8 @@ Unreleased
     creates/updates/deletes the object in the session but does not commit. This
     can be used to avoid extra commits when wrapping the default resolver with
     extra behavior. {issue}`25`
+-   Resolver classes and `ModelManager`, and their methods, are generic on the
+    model class passed to them.
 
 
 ## Version 1.0.0

@@ -35,7 +35,7 @@ class CheckDelete(BaseCheckDelete):
     """
 
     def __init__(
-        self, managers: dict[str, ModelManager], field_name: str = "check_delete"
+        self, managers: dict[str, ModelManager[t.Any]], field_name: str = "check_delete"
     ) -> None:
         super().__init__(field_name=field_name)
 
