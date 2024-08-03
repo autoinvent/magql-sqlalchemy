@@ -8,6 +8,10 @@ Unreleased
 -   Clearer error when SQLAlchemy session is not passed in GraphQL context.
 -   List sorts can be paths across relationships, like `user.name` from `Task`.
     Filters can already be across relationships. {issue}`27`
+-   Default mutation resolvers have a separate `prepare_obj` method that
+    creates/updates/deletes the object in the session but does not commit. This
+    can be used to avoid extra commits when wrapping the default resolver with
+    extra behavior. {issue}`25`
 
 
 ## Version 1.0.0

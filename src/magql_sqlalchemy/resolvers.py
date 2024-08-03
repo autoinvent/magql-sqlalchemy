@@ -440,6 +440,18 @@ class MutationResolver(ModelResolver):
             .where(self.pk_col == kwargs[self.pk_name])
         ).scalar_one()
 
+    def prepare_item(
+        self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]
+    ) -> t.Any:
+        """Get and modify the model instance in the SQLAlchemy session, but do
+        not commit the session. Calling the resolver calls this and then calls
+        commit, but this can be used directly when wrapping the resolver with
+        other behavior.
+
+        .. versionadded:: 1.1
+        """
+        raise NotImplementedError
+
     def apply_related(self, session: orm.Session, kwargs: dict[str, t.Any]) -> None:
         """For all relationship arguments, replace the id values with their model
         instances.
@@ -471,6 +483,14 @@ class MutationResolver(ModelResolver):
                     .all()
                 )
 
+    def __call__(
+        self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
+    ) -> t.Any:
+        item = self.prepare_item(info, kwargs)
+        session = _get_sa_session(info)
+        session.commit()
+        return item
+
 
 class CreateResolver(MutationResolver):
     """Create a new row in the database. Used by :attr:`.ModelManager.create_field`. The
@@ -481,15 +501,14 @@ class CreateResolver(MutationResolver):
     :param model: The SQLAlchemy model.
     """
 
-    def __call__(
-        self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
+    def prepare_item(
+        self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]
     ) -> t.Any:
         session = _get_sa_session(info)
         self.apply_related(session, kwargs)
-        obj = self.model(**kwargs)
-        session.add(obj)
-        session.commit()
-        return obj
+        item = self.model(**kwargs)
+        session.add(item)
+        return item
 
 
 class UpdateResolver(MutationResolver):
@@ -502,8 +521,8 @@ class UpdateResolver(MutationResolver):
     :param model: The SQLAlchemy model.
     """
 
-    def __call__(
-        self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
+    def prepare_item(
+        self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]
     ) -> t.Any:
         session = _get_sa_session(info)
         self.apply_related(session, kwargs)
@@ -515,7 +534,6 @@ class UpdateResolver(MutationResolver):
 
             setattr(item, key, value)
 
-        session.commit()
         return item
 
 
@@ -527,13 +545,18 @@ class DeleteResolver(MutationResolver):
     :param model: The SQLAlchemy model.
     """
 
-    def __call__(
-        self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
+    def prepare_item(
+        self, info: graphql.GraphQLResolveInfo, kwargs: dict[str, t.Any]
     ) -> t.Any:
         session = _get_sa_session(info)
         item = self.get_item(info, kwargs)
         session.delete(item)
-        session.commit()
+        return item
+
+    def __call__(
+        self, parent: t.Any, info: graphql.GraphQLResolveInfo, **kwargs: t.Any
+    ) -> t.Any:
+        super().__call__(parent, info, **kwargs)
         return True
 
 
