@@ -18,9 +18,11 @@ def _populate_db(session: Session) -> None:
 
 
 def test_item(schema_execute: TPExecute) -> None:
-    result = schema_execute("{ user_item(id: 1) { id username } }")
+    result = schema_execute("{ user_item(id: 1) { id username _display_value } }")
     assert result.errors is None
-    assert result.data == {"user_item": {"id": 1, "username": "a"}}
+    assert result.data == {
+        "user_item": {"id": 1, "username": "a", "_display_value": "a"}
+    }
 
 
 def test_item_missing(schema_execute: TPExecute) -> None:

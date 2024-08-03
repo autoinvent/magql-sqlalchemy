@@ -21,6 +21,7 @@ from .resolvers import CreateResolver
 from .resolvers import DeleteResolver
 from .resolvers import ItemResolver
 from .resolvers import ListResolver
+from .resolvers import resolve_display_value
 from .resolvers import UpdateResolver
 from .search import ColumnSearchProvider
 from .validators import ItemExistsValidator
@@ -187,7 +188,17 @@ class ModelManager(t.Generic[M]):
         # Find the primary key column and its Magql type.
         pk_name, pk_col = _find_pk(model_name, mapper.columns)
         pk_type = _convert_column_type(model_name, pk_name, pk_col)
-        self.object = object = magql.Object(model_name, description=get_obj_doc(model))
+        self.object = object = magql.Object(
+            model_name,
+            description=get_obj_doc(model),
+            fields={
+                "_display_value": magql.Field(
+                    "String!",
+                    description="Representation of this object for links.",
+                    resolve=resolve_display_value,
+                ),
+            },
+        )
         attr_docs = get_attr_docs(model)
         item_exists = ItemExistsValidator(model, pk_name, pk_col)
         update_args: dict[str, magql.Argument] = {
